@@ -7,7 +7,7 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/var/www/django/current/
-ExecStart=/var/www/env/bin/gunicorn --bind unix:/tmp/django-gunicorn.sock {{project_name}}.wsgi -w {{cpus}}
+ExecStart=/var/www/env/bin/gunicorn --bind unix:/tmp/gunicorn-django.sock {{project_name}}.wsgi -w {{cpus}}
 
 [Install]
 WantedBy=multi-user.target
