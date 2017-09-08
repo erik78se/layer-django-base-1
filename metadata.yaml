@@ -1,0 +1,13 @@
+name: django-base
+summary: Django base layer
+maintainer: James Beedy <jamesbeedy@gmail.com>
+description: |
+  This layer provides the reactive base layer for Django web apps.
+tags:
+  - django
+  - web
+series:
+  - xenial
+requires:
+  redis:
+    interface: redis

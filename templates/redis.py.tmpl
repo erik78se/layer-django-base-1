@@ -1,0 +1,3 @@
+BROKER_URL = '{{ secrets['redis_uri'] }}/0'
+BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600} 
+CELERY_RESULT_BACKEND = BROKER_URL

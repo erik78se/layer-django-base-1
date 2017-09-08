@@ -1,0 +1,72 @@
+options:
+  installed-apps:
+    type: string
+    default: ""
+    description: |
+        extra installed applications "myapp,myapp1,myapp2"
+  django-project-name:
+    type: string
+    default: "myproject"
+    description: |
+      Django project name (must match whats in your github repo, from the 'repo' config)
+  email-config:
+    type: string
+    default: ""
+    description: |
+      Application email config "MYCONFIG=myconfig,MYOTHER_CONFIG=myotherconfig"
+  use-s3:
+    type: boolean
+    default: true
+    description: |
+      Whether or not to use s3
+  aws-access-key:
+    type: string
+    default: ""
+    description: |
+      AWS access key
+  aws-secret-key:
+    type: string
+    default: ""
+    description: |
+      AWS secret key
+  aws-s3-bucket-name:
+    type: string
+    default: ""
+    description: |
+      AWS S3 bucket name
+  db-roles:
+    type: string
+    default: "postgres"
+    description: |
+      Role to give application level postgres user
+  commit-or-branch:
+    type: string
+    default: "master"
+    description: Commit or branch to update to 
+  repo:
+    type: string
+    default: ""
+    description: The repository to clone from, this is required
+  deploy-key:
+    type: string
+    default: ''
+    description: |
+      A deploy key is an SSH key that is stored on the server and
+      grants access to a repository.
+  key-required:
+    type: boolean
+    default: true
+    description: |
+      This should be set to true to ensure that a deploy key is
+      deployed if necessary
+  fqdn:
+    type: string
+    default: "_"
+    description: |
+      FQDN for data-api
+  port:
+    type: int
+    default: 80
+    description: |
+      NGINX listen port
+

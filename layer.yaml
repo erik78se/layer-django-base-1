@@ -1,0 +1,21 @@
+includes:
+  - 'layer:basic'
+  - 'layer:git-deploy'
+  - 'interface:redis'
+options:
+  git-deploy:
+    target: "/var/www/django"
+  basic:
+    packages:
+      - python3-venv
+      - python3-pip
+      - python3-all
+      - libpq-dev
+      - libssl-dev
+defines:
+  worker:
+    type: boolean
+    default: false
+    description: |
+      Set this to 'true' to enable the application-worker
+repo: 'https://github.com/jamesbeedy/layer-django-base'

@@ -1,0 +1,4 @@
+APPLICATION_COMPONENT = "{{ secrets['application_component'] }}"
+{%- for key, value in secrets.items() %}
+{{ key }}={{ value }}
+{%- endfor -%}

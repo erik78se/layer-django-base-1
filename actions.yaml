@@ -1,0 +1,8 @@
+update-app:
+  description: Update to a commit sha, branch name, or tag name
+  params:
+    commit_or_branch: 
+      type: string
+      description: The commit sha or branch name to update to
+render-settings:
+  description: Render settings.py

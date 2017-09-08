@@ -1,0 +1,187 @@
+#!/usr/bin/python3
+import sys
+from os import environ, remove, walk, symlink
+from os.path import join, exists
+from shutil import rmtree
+from datetime import datetime
+
+from subprocess import (
+    call,
+    PIPE,
+    Popen,
+    CalledProcessError
+)
+
+sys.path.append('hooks')
+sys.path.append('lib')
+
+from charmhelpers.core.host import (
+    chdir,
+    chownr
+)
+
+from charmhelpers.core.hookenv import (
+    action_fail,
+    action_get,
+    leader_get,
+    status_set,
+    is_leader,
+    config,
+    log
+)
+
+from charms.layer.git_deploy import clone, update_to_commit
+from charms.layer.django_base import (
+    APP_DIR,
+    APP_CURRENT,
+    VENV_PIP,
+    VENV_PYTHON,
+    render_settings_py,
+    start_restart
+)
+
+
+DIRS_TO_KEEP = 5
+
+
+def gen_sha_for_current_commit(directory):
+    with chdir(directory):
+        p = Popen(["git", "rev-parse", "HEAD"],
+                  stdout=PIPE, stderr=PIPE)
+        stdout, stderr = p.communicate()
+    return stdout.decode().strip("'")
+ 
+
+def gen_short_sha_for_current_commit(directory):
+    """Returns the short sha for the current commit
+    """
+    with chdir(directory):
+        p = Popen(["git", "log", "--pretty=format:'%h'", "-n 1"],
+                  stdout=PIPE, stderr=PIPE)
+        stdout, stderr = p.communicate()
+    return stdout.decode().strip("'")
+
+
+def gen_sha_for_current_commit(directory):
+    """Returns the sha for the current commit
+    """
+    with chdir(directory):
+        p = Popen(["git", "rev-parse", "HEAD"],
+                  stdout=PIPE, stderr=PIPE)
+        stdout, stderr = p.communicate()
+    return stdout.decode().strip("'")
+
+
+def get_deploy_dirs():
+    """Generates a list of deploy directories
+    """
+    for directory in next(walk(APP_DIR))[1]:
+        if directory.startswith("20"):
+            yield directory
+ 
+
+def current_deploy_dir():
+    """Returns the path to the current deploy dir
+    """
+    return join(APP_DIR, sorted(get_deploy_dirs(),reverse=True)[0])
+    
+
+def cleanup_deploys():
+    """Cleanup deploys older then 5 revs old
+    """
+    if sum(1 for _ in get_deploy_dirs()) > DIRS_TO_KEEP:
+        for directory in sorted(get_deploy_dirs(), reverse=True)[DIRS_TO_KEEP:]:
+            rmtree(join(APP_DIR, directory))
+   
+
+if __name__ == "__main__":
+
+    status_set('maintenance', "Updating codebase")
+    commit_or_branch = action_get("commit-or-branch")
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%d')
+    new_deploy_dir = join(APP_DIR, timestamp)
+    current_deploy = current_deploy_dir()
+
+    try:
+        # Copy current deploy directory over to new deploy dir
+        cp_to_new_deploy = 'cp -rp %s %s' % (current_deploy, new_deploy_dir)
+        call(cp_to_new_deploy.split())
+
+        with chdir(new_deploy_dir):
+            # Git reset
+            status_set('maintenance', "git reset --hard HEAD")
+            call("git reset --hard HEAD".split())
+
+            # Git fetch
+            status_set('maintenance', "git fetch --all --tags")
+            call("git fetch --all --tags".split())
+
+            # Update code in new deploy dir to the
+            # commit or branch name specified as an argument
+            # to the update-app action
+            status_set('maintenance', "git checkout %s" % commit_or_branch)
+            update_to_commit(commit_or_branch, deploy_dir=new_deploy_dir)
+
+            # Git pull to get the latest changes
+            status_set('maintenance', "git pull %s" % commit_or_branch)
+            call("git pull".split())
+
+            # Install any new deps
+            status_set('maintenance', "pip install -r requiremets.txt")
+            call('{} install -r requirements.txt'.format(VENV_PIP).split())
+
+        status_set('maintenance', "ln -s %s %s" % (new_deploy_dir, APP_CURRENT))
+
+        # Create symlink from su config dir to app config dir
+        if exists(APP_CURRENT):
+            remove(APP_CURRENT)
+        symlink(new_deploy_dir, APP_CURRENT)
+
+        for settings_file in ['storage', 'redis', 'settings',
+                              'database', 'email', 'custom']:
+            src_conf = '/var/www/config/{}.py'.format(settings_file)
+            sym_link = '{}/{}/{}.py'.format(
+                APP_CURRENT, config('django-project-name'), settings_file)
+            if exists(sym_link):
+                remove(sym_link)
+            symlink(src_conf, sym_link)
+
+        # Generate REVISION file
+        with chdir(APP_CURRENT):
+            if exists('REVISION'):
+                remove('REVISION')
+            with open("REVISION", "w") as f:
+                f.write(gen_sha_for_current_commit(APP_CURRENT))
+
+         
+        # Collect staticfiles
+        if not options('django-base').get('worker'):
+            status_set('maintenance', "Collecting staticfiles")
+            collect_static_cmd = "{} manage.py collectstatic --noinput".format(VENV_PYTHON)
+
+            with chdir(APP_CURRENT):
+                call(collect_static_cmd.split())
+            status_set('active', "Staticfiles available")
+
+        # Chmod the dirs
+        status_set('maintenance', "chmod -R 755 /var/www")
+        call("chmod -R 755 /var/www".split())
+        # Chown the dirs
+        status_set('maintenance', "chown -R www-data:www-data /var/www")
+        call("chown -R www-data:www-data /var/www".split())
+
+        status_set('maintenance', "Restarting Gunicorn/Django")
+        start_restart('django')
+        if options('djanog-base').get('worker'):
+            start_restart('supervisor')
+
+        # Cleanup deploys
+        status_set('maintenance', "Cleaning up previous deploys")
+        cleanup_deploys()
+
+        sha_short = gen_short_sha_for_current_commit(APP_CURRENT)
+        status_set('active', "Applicatoin updated to SHA: %s" % sha_short)
+
+    except CalledProcessError as e:
+        log(e)
+        action_fail("Update applicatoin failed with message: {}".format(e))

@@ -1,0 +1,60 @@
+#!/usr/bin/python3
+import sys
+from os import environ, remove, walk, symlink
+from os.path import join, exists
+from shutil import rmtree
+from datetime import datetime
+
+from subprocess import (
+    call,
+    PIPE,
+    Popen,
+    CalledProcessError
+)
+
+sys.path.append('hooks')
+sys.path.append('lib')
+
+from charmhelpers.core.host import (
+    chdir,
+    chownr
+)
+
+from charmhelpers.core.hookenv import (
+    action_fail,
+    action_get,
+    leader_get,
+    status_set,
+    is_leader,
+    config,
+    log
+)
+
+from charms.layer import options
+
+from charms.layer.git_deploy import clone, update_to_commit
+from charms.layer.django_base import (
+    APP_DIR,
+    APP_CURRENT,
+    VENV_PIP,
+    VENV_PYTHON,
+    render_settings_py,
+    start_restart
+)
+
+
+if __name__ == "__main__":
+
+    status_set('maintenance', "Rendering settings.py")
+    try:
+        render_settings_py()
+        start_restart('django')
+
+        if options('django-base').get('worker'):
+            start_restart('supervisor')
+
+        status_set('active', "Settings rendered")
+
+    except CalledProcessError as e:
+        log(e)
+        action_fail("Update Django failed with message: {}".format(e))

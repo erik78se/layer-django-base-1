@@ -1,0 +1,5 @@
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+AWS_ACCESS_KEY_ID = '{{ secrets['aws_access_key'] }}'
+AWS_SECRET_ACCESS_KEY = '{{ secrets['aws_secret_key'] }}'
+AWS_STORAGE_BUCKET_NAME = '{{ secrets['aws_s3_bucket_name'] }}'
+AWS_QUERYSTRING_EXPIRE = '8700000'
