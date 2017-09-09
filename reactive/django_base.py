@@ -68,9 +68,10 @@ def render_django_settings():
     """Write out settings.py
     """
     status_set('maintenance', "Rendering Django settings")
-    render_settings_py(
-        secrets={'project_name': config('django-project-name'),
-                 'installed_apps': config('installed-apps')})
+    secrets = {'project_name': config('django-project-name')}
+    if config('installed-apps'):
+        secrets['installed_apps'] = config('installed-apps').split(',')
+    render_settings_py(secrets=secrets)
     status_set('active', "Django settings rendered")
     set_state('django.settings.available')
 
@@ -153,7 +154,7 @@ def write_celery_django_settings():
             s = secret.split("=")
             celery_config[s[0]] = s[1]
         render_settings_py(
-            settings_filename="celery.py", secrets=celery_config)
+            settings_filename="celery_config.py", secrets=celery_config)
 
     status_set('active', 'Celery settings available')
     set_state('django.celery.settings.available')
@@ -167,7 +168,7 @@ def write_custom_django_settings():
 
     status_set('maintenance', 'Writing custom settings')
 
-    custom_config = {'application_component': local_unit().replace("/", "-")}
+    custom_config = {'APPLICATION_COMPONENT': "'{}'".format(local_unit().replace("/", "-"))}
     if config('custom-config'):
         for secret in config('custom-config').strip().split(","):
             s = secret.split("=")
@@ -194,8 +195,8 @@ def render_gunicorn_systemd():
     """Render the systemd conf for the django application
     """
     status_set('maintenance', "Preparing systemd")
-    systemd_service_conf = "/etc/systemd/system/django.service"
-    render('django.service.tmpl', systemd_service_conf,
+    systemd_service_conf = "/etc/systemd/system/django-gunicorn.service"
+    render('django-gunicorn.service.tmpl', systemd_service_conf,
            context={'cpus': cpu_count() + 1,
                     'project_name': config('django-project-name')})
     status_set('active', "Gunicorn systemd service vailable.")
@@ -219,3 +220,8 @@ def set_django_base_avail():
 @when('config.changed.email-config', 'django.base.available')
 def alter_django_email_config():
     remove_state('django.email.settings.available')
+
+
+@when('config.changed.custom-config', 'django.base.available')
+def re_render_custom_config():
+    remove_state('django.custom.settings.available')

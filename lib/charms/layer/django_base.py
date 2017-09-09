@@ -45,7 +45,8 @@ def render_settings_py(settings_filename="settings.py", secrets={}):
     config_source = \
         os.path.join(SU_CONF_DIR, settings_filename)
     config_target = \
-        os.path.join(APP_CURRENT, 'django', settings_filename)
+        os.path.join(APP_CURRENT, config('django-project-name'),
+                     settings_filename)
 
     # Render config source and target
     if os.path.exists(config_target):

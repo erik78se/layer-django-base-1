@@ -26,6 +26,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'storages',
     'djcelery_email',
+    {% if secrets.get('installed_apps', '') %}
+    {%- for app in secrets['installed_apps'] %}
+    {{ app }},
+    {%- endfor -%}
+    {% endif %}
 ]
 
 INSTALLED_APPS += [{{installed_apps}}]
@@ -40,7 +45,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = '{{project_name}}.urls'
+ROOT_URLCONF = '{{ secrets['project_name'] }}.urls'
 
 TEMPLATES = [
     {
@@ -59,7 +64,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = '{{project_name}}.wsgi.application'
+WSGI_APPLICATION = '{{ secrets['project_name'] }}.wsgi.application'
 
 
 # Database
@@ -163,6 +168,11 @@ except:
 
 
 try:
-    from .celery import *
+    from .celery_config import *
+except:
+    pass
+
+try:
+    from .custom import *
 except:
     pass

@@ -9,6 +9,16 @@ options:
     default: "myproject"
     description: |
       Django project name (must match whats in your github repo, from the 'repo' config)
+  custom-config:
+    type: string
+    default: ""
+    description: |
+      Application custom config "MYCONFIG=myconfig,MYOTHER_CONFIG=myotherconfig"
+  celery-config:
+    type: string
+    default: ""
+    description: |
+      Application celery config "MYCONFIG=myconfig,MYOTHER_CONFIG=myotherconfig"
   email-config:
     type: string
     default: ""
@@ -59,14 +69,3 @@ options:
     description: |
       This should be set to true to ensure that a deploy key is
       deployed if necessary
-  fqdn:
-    type: string
-    default: "_"
-    description: |
-      FQDN for data-api
-  port:
-    type: int
-    default: 80
-    description: |
-      NGINX listen port
-
