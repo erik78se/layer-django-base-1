@@ -70,7 +70,7 @@ def render_django_settings():
     status_set('maintenance', "Rendering Django settings")
     render_settings_py(
         secrets={'project_name': config('django-project-name'),
-                 'installed_apps': config('installed-apps'))
+                 'installed_apps': config('installed-apps')})
     status_set('active', "Django settings rendered")
     set_state('django.settings.available')
 
