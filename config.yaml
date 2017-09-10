@@ -26,7 +26,7 @@ options:
       Application email config "MYCONFIG=myconfig,MYOTHER_CONFIG=myotherconfig"
   use-s3:
     type: boolean
-    default: true
+    default: false
     description: |
       Whether or not to use s3
   aws-access-key:

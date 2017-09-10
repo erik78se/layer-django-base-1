@@ -37,11 +37,8 @@ def check_for_django_aws_s3_storage_config():
     if not config('aws-access-key') and \
        not config('aws-secret-key') and \
        not config('aws-s3-bucket-name'):
-        if config('use-s3'):
-            status_set('waiting', 'Need s3 creds if use-s3=true')
-            remove_state('s3.storage.available')
-        else:
-            set_state('local.storage.settings.avilable')
+        remove_state('s3.storage.available')
+        set_state('local.storage.settings.avilable')
     else:
         kv.set('aws_access_key', config('aws-access-key'))
         kv.set('aws_secret_key', config('aws-secret-key'))
@@ -205,9 +202,9 @@ def render_gunicorn_systemd():
 
 @when('gunicorn.systemd.service.available', 'conf.dirs.available',
       'django.custom.settings.available', 'django.redis.settings.available',
-      'django.email.settings.available')
-@when_any('s3.storage.settings.available',
-          'local.storage.settings.available')
+      'django.email.settings.available', 'django.celery.settings.available')
+#@when_any('s3.storage.settings.available',
+#          'local.storage.settings.available')
 @when_not('django.base.available')
 def set_django_base_avail():
     call("chmod -R 755 /var/www".split())
@@ -217,11 +214,11 @@ def set_django_base_avail():
     set_state('django.base.available')
 
 
-@when('config.changed.email-config', 'django.base.available')
-def alter_django_email_config():
-    remove_state('django.email.settings.available')
+#@when('config.changed.email-config', 'django.base.available')
+#def alter_django_email_config():
+#    remove_state('django.email.settings.available')
 
 
-@when('config.changed.custom-config', 'django.base.available')
-def re_render_custom_config():
-    remove_state('django.custom.settings.available')
+#@when('config.changed.custom-config', 'django.base.available')
+#def re_render_custom_config():
+#    remove_state('django.custom.settings.available')
