@@ -30,6 +30,8 @@ from charmhelpers.core.hookenv import (
     log
 )
 
+from charms.layer import options
+
 from charms.layer.git_deploy import clone, update_to_commit
 from charms.layer.django_base import (
     APP_DIR,
@@ -110,27 +112,33 @@ if __name__ == "__main__":
         with chdir(new_deploy_dir):
             # Git reset
             status_set('maintenance', "git reset --hard HEAD")
+            log("maintenance - git reset --hard HEAD")
             call("git reset --hard HEAD".split())
 
             # Git fetch
             status_set('maintenance', "git fetch --all --tags")
+            log("maintenance - git fetch --all --tags")
             call("git fetch --all --tags".split())
 
             # Update code in new deploy dir to the
             # commit or branch name specified as an argument
             # to the update-app action
             status_set('maintenance', "git checkout %s" % commit_or_branch)
+            log("maintenance - git checkout %s" % commit_or_branch)
             update_to_commit(commit_or_branch, deploy_dir=new_deploy_dir)
 
             # Git pull to get the latest changes
-            status_set('maintenance', "git pull %s" % commit_or_branch)
-            call("git pull".split())
+            status_set('maintenance', "git pull origin %s" % commit_or_branch)
+            log("maintenance - git pull origin %s" % commit_or_branch)
+            call("git pull origin {}".format(commit_or_branch).split())
 
             # Install any new deps
             status_set('maintenance', "pip install -r requiremets.txt")
+            log("maintenance - pip install -r requiremets.txt")
             call('{} install -r requirements.txt'.format(VENV_PIP).split())
 
         status_set('maintenance', "ln -s %s %s" % (new_deploy_dir, APP_CURRENT))
+        log("maintenance - ln -s %s %s" % (new_deploy_dir, APP_CURRENT))
 
         # Create symlink from su config dir to app config dir
         if exists(APP_CURRENT):
@@ -138,13 +146,14 @@ if __name__ == "__main__":
         symlink(new_deploy_dir, APP_CURRENT)
 
         for settings_file in ['storage', 'redis', 'settings',
-                              'database', 'email', 'custom']:
+                              'database', 'email', 'custom', 'celery_config']:
             src_conf = '/var/www/config/{}.py'.format(settings_file)
-            sym_link = '{}/{}/{}.py'.format(
-                APP_CURRENT, config('django-project-name'), settings_file)
-            if exists(sym_link):
-                remove(sym_link)
-            symlink(src_conf, sym_link)
+            if exists(src_conf):
+                sym_link = '{}/{}/{}.py'.format(
+                    APP_CURRENT, config('django-project-name'), settings_file)
+                if exists(sym_link):
+                    remove(sym_link)
+                symlink(src_conf, sym_link)
 
         # Generate REVISION file
         with chdir(APP_CURRENT):
@@ -165,22 +174,27 @@ if __name__ == "__main__":
 
         # Chmod the dirs
         status_set('maintenance', "chmod -R 755 /var/www")
+        log("maintenance - chmod -R 755 /var/www")
         call("chmod -R 755 /var/www".split())
         # Chown the dirs
         status_set('maintenance', "chown -R www-data:www-data /var/www")
+        log("maintenance - chown -R www-data:www-data /var/www")
         call("chown -R www-data:www-data /var/www".split())
 
         status_set('maintenance', "Restarting Gunicorn/Django")
-        start_restart('django')
-        if options('djanog-base').get('worker'):
+        log("maintenance - Restarting Gunicorn/Django")
+        start_restart('django-gunicorn')
+        if options('django-base').get('worker'):
             start_restart('supervisor')
 
         # Cleanup deploys
         status_set('maintenance', "Cleaning up previous deploys")
+        log("maintenance - Cleaning up previous deploys")
         cleanup_deploys()
 
         sha_short = gen_short_sha_for_current_commit(APP_CURRENT)
         status_set('active', "Applicatoin updated to SHA: %s" % sha_short)
+        log("active - Applicatoin updated to SHA: %s" % sha_short)
 
     except CalledProcessError as e:
         log(e)

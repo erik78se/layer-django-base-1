@@ -214,9 +214,9 @@ def set_django_base_avail():
     set_state('django.base.available')
 
 
-#@when('config.changed.email-config', 'django.base.available')
-#def alter_django_email_config():
-#    remove_state('django.email.settings.available')
+@when('config.changed.celery-config', 'django.base.available')
+def render_django_email_config():
+    remove_state('django.celery.settings.available')
 
 
 #@when('config.changed.custom-config', 'django.base.available')

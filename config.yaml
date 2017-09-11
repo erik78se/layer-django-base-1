@@ -55,7 +55,7 @@ options:
     description: Commit or branch to update to 
   repo:
     type: string
-    default: ""
+    default: "https://github.com/jamesbeedy/devdev"
     description: The repository to clone from, this is required
   deploy-key:
     type: string
@@ -65,7 +65,7 @@ options:
       grants access to a repository.
   key-required:
     type: boolean
-    default: true
+    default: false
     description: |
       This should be set to true to ensure that a deploy key is
       deployed if necessary
