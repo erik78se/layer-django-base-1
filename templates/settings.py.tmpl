@@ -168,6 +168,12 @@ except:
 
 
 try:
+    from .cron_config import *
+except:
+    pass
+
+
+try:
     from .celery_config import *
 except:
     pass

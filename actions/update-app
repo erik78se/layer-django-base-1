@@ -193,9 +193,9 @@ if __name__ == "__main__":
         cleanup_deploys()
 
         sha_short = gen_short_sha_for_current_commit(APP_CURRENT)
-        status_set('active', "Applicatoin updated to SHA: %s" % sha_short)
-        log("active - Applicatoin updated to SHA: %s" % sha_short)
+        status_set('active', "Application updated to SHA: %s" % sha_short)
+        log("active - Application updated to SHA: %s" % sha_short)
 
     except CalledProcessError as e:
         log(e)
-        action_fail("Update applicatoin failed with message: {}".format(e))
+        action_fail("Update application failed with message: {}".format(e))

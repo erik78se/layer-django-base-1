@@ -1,3 +1,7 @@
+REDIS_HOST = "{{ secrets['redis_host'] }}"
+REDIS_PORT = {{ secrets['redis_port'] }}
+REDIS_PASSWORD = "{{ secrets['redis_password'] }}"
+
 BROKER_URL = '{{ secrets['redis_uri'] }}/0'
 BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600} 
 CELERY_RESULT_BACKEND = BROKER_URL

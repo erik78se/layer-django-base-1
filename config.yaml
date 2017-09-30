@@ -9,6 +9,11 @@ options:
     default: "myproject"
     description: |
       Django project name (must match whats in your github repo, from the 'repo' config)
+  cron-config:
+    type: string
+    default: ""
+    description: |
+      Application cron config "MYCONFIG=myconfig,MYOTHER_CONFIG=myotherconfig"
   custom-config:
     type: string
     default: ""

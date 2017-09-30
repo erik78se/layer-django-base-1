@@ -132,9 +132,36 @@ def get_set_redis_uri(redis):
     """Get set redis connection details
     """
     status_set('maintenance', 'Acquiring Redis URI')
-    kv.set('redis_uri', redis.redis_data()['uri'])
+    redis_data = redis.redis_data()
+    kv.set('redis_uri', redis_data['uri'])
+    kv.set('redis_host', redis_data['host'])
+    kv.set('redis_port', redis_data['port'])
+    kv.set('redis_password', redis_data['password'])
     status_set('active', 'Redis URI acquired')
+    remove_state('django.redis.settings.available')
     set_state('django.redis.available')
+
+
+@when('codebase.available')
+@when_not('django.cron.settings.available')
+def write_cron_django_settings():
+    """Write out cron django settings
+    """
+
+    status_set('maintenance', 'Writing cron settings')
+
+    celery_config = {}
+    if config('cron-config'):
+        for secret in config('cron-config').strip().split("#"):
+            s = secret.split("=")
+            celery_config[s[0]] = s[1]
+        render_settings_py(
+            settings_filename="cron_config.py", secrets=celery_config)
+
+    status_set('active', 'Cron settings available')
+    set_state('django.cron.settings.available')
+
+
 
 
 @when('codebase.available')
@@ -167,7 +194,7 @@ def write_custom_django_settings():
 
     custom_config = {'APPLICATION_COMPONENT': "'{}'".format(local_unit().replace("/", "-"))}
     if config('custom-config'):
-        for secret in config('custom-config').strip().split(","):
+        for secret in config('custom-config').strip().split("#"):
             s = secret.split("=")
             custom_config[s[0]] = s[1]
         render_settings_py(
@@ -182,7 +209,7 @@ def write_custom_django_settings():
 def render_redis_settings():
     status_set('maintenance', 'Rendering Redis settings')
     render_settings_py(settings_filename="redis.py",
-                       secrets={'redis_uri': kv.get('redis_uri')})
+                       secrets=kv.getrange("redis"))
     status_set('active', 'Redis config available')
     set_state('django.redis.settings.available')
 
@@ -215,10 +242,20 @@ def set_django_base_avail():
 
 
 @when('config.changed.celery-config', 'django.base.available')
-def render_django_email_config():
+def render_django_celery_config():
     remove_state('django.celery.settings.available')
 
 
-#@when('config.changed.custom-config', 'django.base.available')
-#def re_render_custom_config():
-#    remove_state('django.custom.settings.available')
+@when('config.changed.custom-config', 'django.base.available')
+def re_render_custom_config():
+    remove_state('django.custom.settings.available')
+
+
+@when('config.changed.email-config', 'django.base.available')
+def re_render_email_config():
+    remove_state('django.email.settings.available')
+
+
+@when('redis.broken')
+def remove_state_redis_avail(redis):
+    remove_state('django.redis.available')
