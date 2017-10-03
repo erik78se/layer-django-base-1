@@ -2,6 +2,7 @@ includes:
   - 'layer:basic'
   - 'layer:git-deploy'
   - 'layer:elasticsearch-client'
+  - 'layer:memcache-client'
   - 'interface:redis'
 options:
   git-deploy:

@@ -11,3 +11,5 @@ series:
 requires:
   redis:
     interface: redis
+  memcache:
+    interface: memcache

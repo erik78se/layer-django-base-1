@@ -1,12 +1,14 @@
 import os
 import shutil
+from subprocess import call
 
 from jinja2 import Environment, FileSystemLoader
 
 from charmhelpers.core import unitdata
-from charmhelpers.core.hookenv import config, charm_dir
+from charmhelpers.core.hookenv import config, charm_dir, status_set
 from charmhelpers.core.host import (
     chownr,
+    chdir,
     service_running,
     service_start,
     service_restart
@@ -36,6 +38,13 @@ def start_restart(service):
         service_restart(service)
     else:
         service_start(service)
+
+
+def pip_install(pkg):
+    status_set('maintenance', "{} install {}".format(VENV_PIP, pkg))
+    with chdir(APP_CURRENT):
+        call("{} install {}".format(VENV_PIP, pkg).split())
+    status_set('active', "{} installed successfully".format(pkg))
 
 
 def render_settings_py(settings_filename, secrets=None):

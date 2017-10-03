@@ -27,6 +27,7 @@ from charms.layer.django_base import (
     SU_CONF_DIR,
     LOG_DIR,
     render_settings_py,
+    pip_install,
 )
 
 
@@ -99,11 +100,8 @@ def install_venv_and_pip_deps():
     create_venv_cmd = "python3 -m venv /var/www/env"
     call(create_venv_cmd.split())
 
-    with chdir(APP_CURRENT):
-        pip_deps_install = "{} install psycopg2 gunicorn".format(VENV_PIP)
-        call(pip_deps_install.split())
-        pip_deps_install = "{} install -r requirements.txt".format(VENV_PIP)
-        call(pip_deps_install.split())
+    pip_install("-r requirements.txt")
+    pip_install("gunicorn psycopg2 python-memcached")
 
     status_set('active', "Application pip deps installed")
     set_state('pip.deps.available')
@@ -227,6 +225,15 @@ def render_redis_settings():
         settings_filename="redis.py", secrets=kv.getrange("redis"))
     status_set('active', 'Redis config available')
     set_state('django.redis.settings.available')
+
+
+@when('memcache.client.available')
+@when_not('django.memcache.settings.available')
+def render_memcache_config():
+    status_set('maintenance', 'Rendering Memcache settings')
+    render_settings_py(settings_filename="memcache_config.py")
+    status_set('active', 'Memcache config available')
+    set_state('django.memcache.settings.available')
 
 
 @when_not('gunicorn.systemd.service.available')
