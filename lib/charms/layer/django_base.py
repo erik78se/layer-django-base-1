@@ -38,9 +38,12 @@ def start_restart(service):
         service_start(service)
 
 
-def render_settings_py(settings_filename="settings.py", secrets={}):
+def render_settings_py(settings_filename, secrets=None):
     """Render settings.py
     """
+    if not secrets:
+        secrets = {}
+
     # Set paths
     config_source = \
         os.path.join(SU_CONF_DIR, settings_filename)
@@ -116,20 +119,3 @@ def chown(path, user, group=None, recursive=False):
                     shutil.chown(os.path.join(root, item), user, group)
     except OSError as e:
         raise UtilsException(e)
-
-
-def return_secrets(secrets={}):
-    """Return secrets dict
-       NOT USED CURRENTLY
-    """
-
-    conf = config()
-    secrets_mod = secrets
-
-    for i in ['secrets', 'email-config']:
-        if conf.get(i):
-            secrets_from_config = config(i).strip().split(",")
-            for secret in secrets_from_config:
-                s = secret.split("=")
-                secrets_mod[s[0]] = s[1]
-    return secrets_mod

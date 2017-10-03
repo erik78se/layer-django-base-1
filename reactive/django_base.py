@@ -74,7 +74,7 @@ def render_django_settings():
     secrets = {'project_name': config('django-project-name')}
     if config('installed-apps'):
         secrets['installed_apps'] = config('installed-apps').split(',')
-    render_settings_py(secrets=secrets)
+    render_settings_py(settings_filename="secrets.py", secrets=secrets)
     status_set('active', "Django settings rendered")
     set_state('django.settings.available')
 
@@ -120,8 +120,7 @@ def render_email_config():
             s = secret.split("=")
             email_config[s[0]] = s[1]
 
-        render_settings_py(settings_filename="email.py",
-                           secrets=email_config)
+        render_settings_py(settings_filename="email.py", secrets=email_config)
         status_set('active', "Django email settings available")
     else:
         status_set('active', "No SMTP configured")
@@ -139,8 +138,7 @@ def render_s3_storage_config():
                       'aws_secret_key': kv.get('aws_secret_key'),
                       'aws_s3_bucket_name': kv.get('aws_s3_bucket_name')}
 
-    render_settings_py(settings_filename="storage.py",
-                       secrets=storage_config)
+    render_settings_py(settings_filename="storage.py", secrets=storage_config)
 
     status_set('active', "S3 storage available")
     set_state('s3.storage.settings.available')
@@ -228,8 +226,8 @@ def write_custom_django_settings():
 @when_not('django.redis.settings.available')
 def render_redis_settings():
     status_set('maintenance', 'Rendering Redis settings')
-    render_settings_py(settings_filename="redis.py",
-                       secrets=kv.getrange("redis"))
+    render_settings_py(
+        settings_filename="redis.py", secrets=kv.getrange("redis"))
     status_set('active', 'Redis config available')
     set_state('django.redis.settings.available')
 
