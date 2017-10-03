@@ -251,6 +251,7 @@ def render_gunicorn_systemd():
       'pip.deps.available',
       'conf.dirs.available',
       'django.settings.available',
+      'django.wsgi.available',
       'django.custom.settings.available',
       'django.email.settings.available',
       'django.celery.settings.available')
