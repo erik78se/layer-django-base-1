@@ -134,11 +134,8 @@ def render_email_config():
 def render_s3_storage_config():
     status_set('maintenance', "Configuring S3 storage")
 
-    storage_config = {'aws_access_key': kv.get('aws_access_key'),
-                      'aws_secret_key': kv.get('aws_secret_key'),
-                      'aws_s3_bucket_name': kv.get('aws_s3_bucket_name')}
-
-    render_settings_py(settings_filename="storage.py", secrets=storage_config)
+    render_settings_py(
+        settings_filename="storage.py", secrets=kv.getrange('aws'))
 
     status_set('active', "S3 storage available")
     set_state('s3.storage.settings.available')

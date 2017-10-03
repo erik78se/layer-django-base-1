@@ -39,7 +39,7 @@ def start_restart(service):
 
 
 def render_settings_py(settings_filename, secrets=None):
-    """Render settings.py
+    """Render settings file
     """
     if not secrets:
         secrets = {}
