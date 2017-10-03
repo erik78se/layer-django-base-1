@@ -20,6 +20,7 @@ from charms.reactive import (
     remove_state
 )
 
+
 from charms.layer.django_base import (
     VENV_PIP,
     APP_CURRENT,
@@ -34,17 +35,20 @@ kv = unitdata.kv()
 
 @when_not('s3.storage.checked')
 def check_for_django_aws_s3_storage_config():
+    status_set('maintenance', 'Checking S3 storage configs')
     if not config('aws-access-key') and \
        not config('aws-secret-key') and \
        not config('aws-s3-bucket-name'):
         remove_state('s3.storage.available')
-        set_state('local.storage.settings.avilable')
+        set_state('local.storage.settings.available')
+        status_set('active', 'Django local storage available')
     else:
         kv.set('aws_access_key', config('aws-access-key'))
         kv.set('aws_secret_key', config('aws-secret-key'))
         kv.set('aws_s3_bucket_name', config('aws-s3-bucket-name'))
         remove_state('s3.storage.settings.available')
         set_state('s3.storage.avilable')
+        status_set('active', 'Django S3 storage available')
     set_state('s3.storage.checked')
 
 
@@ -52,10 +56,12 @@ def check_for_django_aws_s3_storage_config():
 def create_conf_dir():
     """Ensure config dir exists
     """
+    status_set('maintenance', "Creating application directories")
     for directory in [SU_CONF_DIR, LOG_DIR]:
         if not os.path.isdir(directory):
             os.makedirs(directory, mode=0o755, exist_ok=True)
         chownr(directory, owner='www-data', group='www-data')
+    status_set('active', "Application directories created")
     set_state('conf.dirs.available')
 
 
@@ -162,8 +168,6 @@ def write_cron_django_settings():
     set_state('django.cron.settings.available')
 
 
-
-
 @when('codebase.available')
 @when_not('django.celery.settings.available')
 def write_celery_django_settings():
@@ -192,7 +196,9 @@ def write_custom_django_settings():
 
     status_set('maintenance', 'Writing custom settings')
 
-    custom_config = {'APPLICATION_COMPONENT': "'{}'".format(local_unit().replace("/", "-"))}
+    custom_config = \
+        {'APPLICATION_COMPONENT': "'{}'".format(
+            local_unit().replace("/", "-"))}
     if config('custom-config'):
         for secret in config('custom-config').strip().split("#"):
             s = secret.split("=")
@@ -227,11 +233,15 @@ def render_gunicorn_systemd():
     set_state('gunicorn.systemd.service.available')
 
 
-@when('gunicorn.systemd.service.available', 'conf.dirs.available',
-      'django.custom.settings.available', 'django.redis.settings.available',
-      'django.email.settings.available', 'django.celery.settings.available')
-#@when_any('s3.storage.settings.available',
-#          'local.storage.settings.available')
+@when('gunicorn.systemd.service.available',
+      'pip.deps.available',
+      'conf.dirs.available',
+      'django.settings.available',
+      'django.custom.settings.available',
+      'django.email.settings.available',
+      'django.celery.settings.available')
+@when_any('s3.storage.settings.available',
+          'local.storage.settings.available')
 @when_not('django.base.available')
 def set_django_base_avail():
     call("chmod -R 755 /var/www".split())

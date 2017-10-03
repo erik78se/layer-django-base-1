@@ -13,12 +13,12 @@ options:
     type: string
     default: ""
     description: |
-      Application cron config "MYCONFIG=myconfig,MYOTHER_CONFIG=myotherconfig"
+      Application cron config deleniated by "#" "MYCONFIG=myconfig#MYOTHER_CONFIG=myotherconfig"
   custom-config:
     type: string
     default: ""
     description: |
-      Application custom config "MYCONFIG=myconfig,MYOTHER_CONFIG=myotherconfig"
+      Application custom config deleniated by "#" "MYCONFIG=myconfig#MYOTHER_CONFIG=myotherconfig"
   celery-config:
     type: string
     default: ""
@@ -29,11 +29,6 @@ options:
     default: ""
     description: |
       Application email config "MYCONFIG=myconfig,MYOTHER_CONFIG=myotherconfig"
-  use-s3:
-    type: boolean
-    default: false
-    description: |
-      Whether or not to use s3
   aws-access-key:
     type: string
     default: ""
