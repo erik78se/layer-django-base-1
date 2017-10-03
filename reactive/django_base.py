@@ -80,6 +80,18 @@ def render_django_settings():
 
 
 @when('codebase.available')
+@when_not('django.wsgi.available')
+def render_wsgi_py():
+    """Write out settings.py
+    """
+    status_set('maintenance', "Rendering wsgi.py")
+    secrets = {'project_name': config('django-project-name')}
+    render_settings_py(settings_filename="wsgi.py", secrets=secrets)
+    status_set('active', "Django wsgi.py rendered")
+    set_state('django.wsgi.available')
+
+
+@when('codebase.available')
 @when_not('pip.deps.available')
 def install_venv_and_pip_deps():
     status_set('maintenance', "Installing application deps")

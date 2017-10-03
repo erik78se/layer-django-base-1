@@ -24,8 +24,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'storages',
-    'djcelery_email',
     {% if secrets.get('installed_apps', '') %}
     {%- for app in secrets['installed_apps'] %}
     {{ app }},
@@ -33,7 +31,6 @@ INSTALLED_APPS = [
     {% endif %}
 ]
 
-INSTALLED_APPS += [{{installed_apps}}]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

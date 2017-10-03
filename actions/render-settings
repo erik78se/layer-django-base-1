@@ -47,8 +47,12 @@ if __name__ == "__main__":
 
     status_set('maintenance', "Rendering settings.py")
     try:
-        render_settings_py()
-        start_restart('django')
+
+        secrets = {'project_name': config('django-project-name')}
+        if config('installed-apps'):
+             secrets['installed_apps'] = config('installed-apps').split(',')
+        render_settings_py(secrets=secrets)
+        start_restart('django-gunicorn')
 
         if options('django-base').get('worker'):
             start_restart('supervisor')
