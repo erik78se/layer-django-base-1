@@ -88,6 +88,8 @@ def install_venv_and_pip_deps():
     call(create_venv_cmd.split())
 
     with chdir(APP_CURRENT):
+        pip_deps_install = "{} install psycopg2 gunicorn".format(VENV_PIP)
+        call(pip_deps_install.split())
         pip_deps_install = "{} install -r requirements.txt".format(VENV_PIP)
         call(pip_deps_install.split())
 
