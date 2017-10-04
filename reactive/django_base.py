@@ -75,7 +75,7 @@ def render_django_settings():
     secrets = {'project_name': config('django-project-name')}
     if config('installed-apps'):
         secrets['installed_apps'] = config('installed-apps').split(',')
-    render_settings_py(settings_filename="secrets.py", secrets=secrets)
+    render_settings_py(settings_filename="settings.py", secrets=secrets)
     status_set('active', "Django settings rendered")
     set_state('django.settings.available')
 
