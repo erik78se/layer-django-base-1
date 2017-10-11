@@ -2,8 +2,20 @@ import os
 from subprocess import call
 from multiprocessing import cpu_count
 
+from charms.reactive.flags import (
+    register_trigger,
+    clear_flag,
+    set_flag,
+)
+
+from charms.reactive.decorators import (
+    when,
+    when_any,
+    when_not
+)
+
 from charmhelpers.core import unitdata
-from charmhelpers.core.host import chownr, chdir
+from charmhelpers.core.host import chownr
 from charmhelpers.core.hookenv import (
     config,
     local_unit,
@@ -12,18 +24,7 @@ from charmhelpers.core.hookenv import (
 
 from charmhelpers.core.templating import render
 
-from charms.reactive import (
-    when,
-    when_any,
-    when_not,
-    set_state,
-    remove_state
-)
-
-
 from charms.layer.django_base import (
-    VENV_PIP,
-    APP_CURRENT,
     SU_CONF_DIR,
     LOG_DIR,
     render_settings_py,
@@ -33,6 +34,18 @@ from charms.layer.django_base import (
 
 kv = unitdata.kv()
 
+register_trigger(when='config.changed.celery.config',
+                 clear_flag='django.celery.settings.available')
+
+register_trigger(when='config.changed.custom-config',
+                 clear_flag='django.custom.settings.available')
+
+register_trigger(when='config.changed.email-config',
+                 clear_flag='django.email.settings.available')
+
+register_trigger(when='redis.broken',
+                 clear_flag='django.redis.available')
+
 
 @when_not('s3.storage.checked')
 def check_for_django_aws_s3_storage_config():
@@ -40,17 +53,17 @@ def check_for_django_aws_s3_storage_config():
     if not config('aws-access-key') and \
        not config('aws-secret-key') and \
        not config('aws-s3-bucket-name'):
-        remove_state('s3.storage.available')
-        set_state('local.storage.settings.available')
+        clear_flag('s3.storage.available')
+        set_flag('local.storage.settings.available')
         status_set('active', 'Django local storage available')
     else:
         kv.set('aws_access_key', config('aws-access-key'))
         kv.set('aws_secret_key', config('aws-secret-key'))
         kv.set('aws_s3_bucket_name', config('aws-s3-bucket-name'))
-        remove_state('s3.storage.settings.available')
-        set_state('s3.storage.avilable')
+        clear_flag('s3.storage.settings.available')
+        set_flag('s3.storage.avilable')
         status_set('active', 'Django S3 storage available')
-    set_state('s3.storage.checked')
+    set_flag('s3.storage.checked')
 
 
 @when_not('conf.dirs.available')
@@ -63,7 +76,7 @@ def create_conf_dir():
             os.makedirs(directory, mode=0o755, exist_ok=True)
         chownr(directory, owner='www-data', group='www-data')
     status_set('active', "Application directories created")
-    set_state('conf.dirs.available')
+    set_flag('conf.dirs.available')
 
 
 @when('codebase.available')
@@ -77,7 +90,7 @@ def render_django_settings():
         secrets['installed_apps'] = config('installed-apps').split(',')
     render_settings_py(settings_filename="settings.py", secrets=secrets)
     status_set('active', "Django settings rendered")
-    set_state('django.settings.available')
+    set_flag('django.settings.available')
 
 
 @when('codebase.available')
@@ -89,7 +102,7 @@ def render_wsgi_py():
     secrets = {'project_name': config('django-project-name')}
     render_settings_py(settings_filename="wsgi.py", secrets=secrets)
     status_set('active', "Django wsgi.py rendered")
-    set_state('django.wsgi.available')
+    set_flag('django.wsgi.available')
 
 
 @when('codebase.available')
@@ -104,7 +117,7 @@ def install_venv_and_pip_deps():
     pip_install("gunicorn psycopg2 python-memcached")
 
     status_set('active', "Application pip deps installed")
-    set_state('pip.deps.available')
+    set_flag('pip.deps.available')
 
 
 @when('codebase.available')
@@ -123,7 +136,7 @@ def render_email_config():
     else:
         status_set('active', "No SMTP configured")
 
-    set_state('django.email.settings.available')
+    set_flag('django.email.settings.available')
 
 
 @when('codebase.available',
@@ -136,7 +149,7 @@ def render_s3_storage_config():
         settings_filename="storage.py", secrets=kv.getrange('aws'))
 
     status_set('active', "S3 storage available")
-    set_state('s3.storage.settings.available')
+    set_flag('s3.storage.settings.available')
 
 
 @when('redis.available')
@@ -151,8 +164,8 @@ def get_set_redis_uri(redis):
     kv.set('redis_port', redis_data['port'])
     kv.set('redis_password', redis_data['password'])
     status_set('active', 'Redis URI acquired')
-    remove_state('django.redis.settings.available')
-    set_state('django.redis.available')
+    clear_flag('django.redis.settings.available')
+    set_flag('django.redis.available')
 
 
 @when('codebase.available')
@@ -172,7 +185,7 @@ def write_cron_django_settings():
             settings_filename="cron_config.py", secrets=celery_config)
 
     status_set('active', 'Cron settings available')
-    set_state('django.cron.settings.available')
+    set_flag('django.cron.settings.available')
 
 
 @when('codebase.available')
@@ -192,7 +205,7 @@ def write_celery_django_settings():
             settings_filename="celery_config.py", secrets=celery_config)
 
     status_set('active', 'Celery settings available')
-    set_state('django.celery.settings.available')
+    set_flag('django.celery.settings.available')
 
 
 @when('codebase.available')
@@ -214,7 +227,7 @@ def write_custom_django_settings():
             settings_filename="custom.py", secrets=custom_config)
 
     status_set('active', 'Custom settings available')
-    set_state('django.custom.settings.available')
+    set_flag('django.custom.settings.available')
 
 
 @when('django.redis.available', 'codebase.available')
@@ -224,7 +237,7 @@ def render_redis_settings():
     render_settings_py(
         settings_filename="redis.py", secrets=kv.getrange("redis"))
     status_set('active', 'Redis config available')
-    set_state('django.redis.settings.available')
+    set_flag('django.redis.settings.available')
 
 
 @when('memcache.client.available')
@@ -233,7 +246,7 @@ def render_memcache_config():
     status_set('maintenance', 'Rendering Memcache settings')
     render_settings_py(settings_filename="memcache_config.py")
     status_set('active', 'Memcache config available')
-    set_state('django.memcache.settings.available')
+    set_flag('django.memcache.settings.available')
 
 
 @when_not('gunicorn.systemd.service.available')
@@ -246,7 +259,7 @@ def render_gunicorn_systemd():
            context={'cpus': cpu_count() + 1,
                     'project_name': config('django-project-name')})
     status_set('active', "Gunicorn systemd service vailable.")
-    set_state('gunicorn.systemd.service.available')
+    set_flag('gunicorn.systemd.service.available')
 
 
 @when('gunicorn.systemd.service.available',
@@ -265,24 +278,4 @@ def set_django_base_avail():
     call("chmod -R 755 {}".format(LOG_DIR).split())
     call("chown -R www-data:www-data /var/www".split())
     call("chown -R www-data:www-data {}".format(LOG_DIR).split())
-    set_state('django.base.available')
-
-
-@when('config.changed.celery-config', 'django.base.available')
-def render_django_celery_config():
-    remove_state('django.celery.settings.available')
-
-
-@when('config.changed.custom-config', 'django.base.available')
-def re_render_custom_config():
-    remove_state('django.custom.settings.available')
-
-
-@when('config.changed.email-config', 'django.base.available')
-def re_render_email_config():
-    remove_state('django.email.settings.available')
-
-
-@when('redis.broken')
-def remove_state_redis_avail(redis):
-    remove_state('django.redis.available')
+    set_flag('django.base.available')
