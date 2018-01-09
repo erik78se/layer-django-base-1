@@ -12,7 +12,7 @@ defines:
       Set this to 'true' to enable the application-worker
 options:
   snap:
-    django-snap:
+    django-gunicorn-nginx:
       channel: stable
       devmode: false
       jailmode: false

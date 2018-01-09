@@ -78,7 +78,7 @@ def create_conf_dir():
     set_flag('conf.dirs.available')
 
 
-@when('snap.installed.django-gunicorn')
+@when('snap.installed.django-gunicorn-nginx')
 @when_not('django.email.settings.available')
 def render_email_config():
     status_set('maintenance', "Configuring email")
@@ -97,7 +97,7 @@ def render_email_config():
     set_flag('django.email.settings.available')
 
 
-@when('snap.installed.django-gunicorn',
+@when('snap.installed.django-gunicorn-nginx',
       's3.storage.avilable')
 @when_not('s3.storage.settings.available')
 def render_s3_storage_config():
@@ -130,7 +130,7 @@ def get_set_redis_uri():
     set_flag('django.redis.available')
 
 
-@when('snap.installed.django-gunicorn')
+@when('snap.installed.django-gunicorn-nginx')
 @when_not('django.cron.settings.available')
 def write_cron_django_settings():
     """Write out cron django settings
@@ -150,7 +150,7 @@ def write_cron_django_settings():
     set_flag('django.cron.settings.available')
 
 
-@when('snap.installed.django-gunicorn')
+@when('snap.installed.django-gunicorn-nginx')
 @when_not('django.celery.settings.available')
 def write_celery_django_settings():
     """Write out celery django settings
@@ -169,7 +169,7 @@ def write_celery_django_settings():
     set_flag('django.celery.settings.available')
 
 
-@when('snap.installed.django-gunicorn')
+@when('snap.installed.django-gunicorn-nginx')
 @when_not('django.custom.settings.available')
 def write_custom_django_settings():
     """Write out custom django settings
@@ -191,7 +191,7 @@ def write_custom_django_settings():
 
 
 @when('django.redis.available',
-      'snap.installed.django-gunicorn')
+      'snap.installed.django-gunicorn-nginx')
 @when_not('django.redis.settings.available')
 def render_redis_settings():
     status_set('maintenance', 'Rendering Redis settings')
