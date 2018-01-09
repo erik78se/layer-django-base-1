@@ -11,3 +11,8 @@ series:
 requires:
   redis:
     interface: redis
+resources:
+  django-gunicorn-nginx:
+    type: file
+    filename: django-gunicorn-nginx_0.1_amd64.snap
+    description: Django-Gunicorn-NGINX snap

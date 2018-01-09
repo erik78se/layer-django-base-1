@@ -1,23 +1,22 @@
 includes:
   - 'layer:basic'
-  - 'layer:git-deploy'
+  - 'layer:snap'
   - 'layer:elasticsearch-client'
   - 'layer:memcache-client'
   - 'interface:redis'
-options:
-  git-deploy:
-    target: "/var/www/django"
-  basic:
-    packages:
-      - python3-venv
-      - python3-pip
-      - python3-all
-      - libpq-dev
-      - libssl-dev
 defines:
   worker:
     type: boolean
     default: false
     description: |
       Set this to 'true' to enable the application-worker
-repo: 'https://github.com/jamesbeedy/layer-django-base'
+options:
+  snap:
+    django-snap:
+      channel: stable
+      devmode: false
+      jailmode: false
+      dangerous: true
+      classic: true
+      revision: null
+repo: 'https://github.com/omnivector-solutions/layer-django-base'

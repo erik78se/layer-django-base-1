@@ -2,21 +2,20 @@ import os
 from subprocess import call
 from multiprocessing import cpu_count
 
-from charms.reactive.flags import (
-    register_trigger,
+from charms.reactive import (
     clear_flag,
+    endpoint_from_flag,
+    register_trigger,
     set_flag,
-)
-
-from charms.reactive.decorators import (
     when,
     when_any,
-    when_not
+    when_not,
 )
 
 from charmhelpers.core import unitdata
 from charmhelpers.core.host import chownr
 from charmhelpers.core.hookenv import (
+    application_version_set,
     config,
     local_unit,
     status_set,
@@ -79,48 +78,7 @@ def create_conf_dir():
     set_flag('conf.dirs.available')
 
 
-@when('codebase.available')
-@when_not('django.settings.available')
-def render_django_settings():
-    """Write out settings.py
-    """
-    status_set('maintenance', "Rendering Django settings")
-    secrets = {'project_name': config('django-project-name')}
-    if config('installed-apps'):
-        secrets['installed_apps'] = config('installed-apps').split(',')
-    render_settings_py(settings_filename="settings.py", secrets=secrets)
-    status_set('active', "Django settings rendered")
-    set_flag('django.settings.available')
-
-
-@when('codebase.available')
-@when_not('django.wsgi.available')
-def render_wsgi_py():
-    """Write out settings.py
-    """
-    status_set('maintenance', "Rendering wsgi.py")
-    secrets = {'project_name': config('django-project-name')}
-    render_settings_py(settings_filename="wsgi.py", secrets=secrets)
-    status_set('active', "Django wsgi.py rendered")
-    set_flag('django.wsgi.available')
-
-
-@when('codebase.available')
-@when_not('pip.deps.available')
-def install_venv_and_pip_deps():
-    status_set('maintenance', "Installing application deps")
-
-    create_venv_cmd = "python3 -m venv /var/www/env"
-    call(create_venv_cmd.split())
-
-    pip_install("-r requirements.txt")
-    pip_install("gunicorn psycopg2 python-memcached")
-
-    status_set('active', "Application pip deps installed")
-    set_flag('pip.deps.available')
-
-
-@when('codebase.available')
+@when('snap.installed.django-gunicorn')
 @when_not('django.email.settings.available')
 def render_email_config():
     status_set('maintenance', "Configuring email")
@@ -139,7 +97,7 @@ def render_email_config():
     set_flag('django.email.settings.available')
 
 
-@when('codebase.available',
+@when('snap.installed.django-gunicorn',
       's3.storage.avilable')
 @when_not('s3.storage.settings.available')
 def render_s3_storage_config():
@@ -152,23 +110,27 @@ def render_s3_storage_config():
     set_flag('s3.storage.settings.available')
 
 
-@when('redis.available')
+@when('endpoint.redis.available')
 @when_not('django.redis.available')
-def get_set_redis_uri(redis):
+def get_set_redis_uri():
     """Get set redis connection details
     """
     status_set('maintenance', 'Acquiring Redis URI')
-    redis_data = redis.redis_data()
-    kv.set('redis_uri', redis_data['uri'])
-    kv.set('redis_host', redis_data['host'])
-    kv.set('redis_port', redis_data['port'])
-    kv.set('redis_password', redis_data['password'])
+
+    for application in endpoint_from_flag(
+       'endpoint.redis.available').relation_data():
+        for redis_node in application['hosts']:
+            kv.set('redis_host', redis_node['host'])
+            kv.set('redis_port', int(redis_node['port']))
+            kv.set('redis_password', redis_node['password'])
+            kv.set('redis_db', 0)
+
     status_set('active', 'Redis URI acquired')
     clear_flag('django.redis.settings.available')
     set_flag('django.redis.available')
 
 
-@when('codebase.available')
+@when('snap.installed.django-gunicorn')
 @when_not('django.cron.settings.available')
 def write_cron_django_settings():
     """Write out cron django settings
@@ -188,7 +150,7 @@ def write_cron_django_settings():
     set_flag('django.cron.settings.available')
 
 
-@when('codebase.available')
+@when('snap.installed.django-gunicorn')
 @when_not('django.celery.settings.available')
 def write_celery_django_settings():
     """Write out celery django settings
@@ -203,12 +165,11 @@ def write_celery_django_settings():
             celery_config[s[0]] = s[1]
         render_settings_py(
             settings_filename="celery_config.py", secrets=celery_config)
-
-    status_set('active', 'Celery settings available')
+        status_set('active', 'Celery settings available')
     set_flag('django.celery.settings.available')
 
 
-@when('codebase.available')
+@when('snap.installed.django-gunicorn')
 @when_not('django.custom.settings.available')
 def write_custom_django_settings():
     """Write out custom django settings
@@ -225,12 +186,12 @@ def write_custom_django_settings():
             custom_config[s[0]] = s[1]
         render_settings_py(
             settings_filename="custom.py", secrets=custom_config)
-
-    status_set('active', 'Custom settings available')
+        status_set('active', 'Custom settings available')
     set_flag('django.custom.settings.available')
 
 
-@when('django.redis.available', 'codebase.available')
+@when('django.redis.available',
+      'snap.installed.django-gunicorn')
 @when_not('django.redis.settings.available')
 def render_redis_settings():
     status_set('maintenance', 'Rendering Redis settings')
@@ -249,24 +210,7 @@ def render_memcache_config():
     set_flag('django.memcache.settings.available')
 
 
-@when_not('gunicorn.systemd.service.available')
-def render_gunicorn_systemd():
-    """Render the systemd conf for the django application
-    """
-    status_set('maintenance', "Preparing systemd")
-    systemd_service_conf = "/etc/systemd/system/django-gunicorn.service"
-    render('django-gunicorn.service.tmpl', systemd_service_conf,
-           context={'cpus': cpu_count() + 1,
-                    'project_name': config('django-project-name')})
-    status_set('active', "Gunicorn systemd service vailable.")
-    set_flag('gunicorn.systemd.service.available')
-
-
-@when('gunicorn.systemd.service.available',
-      'pip.deps.available',
-      'conf.dirs.available',
-      'django.settings.available',
-      'django.wsgi.available',
+@when('conf.dirs.available',
       'django.custom.settings.available',
       'django.email.settings.available',
       'django.celery.settings.available')
@@ -274,8 +218,4 @@ def render_gunicorn_systemd():
           'local.storage.settings.available')
 @when_not('django.base.available')
 def set_django_base_avail():
-    call("chmod -R 755 /var/www".split())
-    call("chmod -R 755 {}".format(LOG_DIR).split())
-    call("chown -R www-data:www-data /var/www".split())
-    call("chown -R www-data:www-data {}".format(LOG_DIR).split())
     set_flag('django.base.available')
