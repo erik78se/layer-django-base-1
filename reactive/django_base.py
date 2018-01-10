@@ -33,7 +33,7 @@ from charms.layer.django_base import (
 
 kv = unitdata.kv()
 
-register_trigger(when='config.changed.celery.config',
+register_trigger(when='config.changed.celery-config',
                  clear_flag='django.celery.settings.available')
 
 register_trigger(when='config.changed.custom-config',
@@ -41,9 +41,6 @@ register_trigger(when='config.changed.custom-config',
 
 register_trigger(when='config.changed.email-config',
                  clear_flag='django.email.settings.available')
-
-register_trigger(when='redis.broken',
-                 clear_flag='django.redis.available')
 
 
 @when_not('s3.storage.checked')
@@ -63,19 +60,6 @@ def check_for_django_aws_s3_storage_config():
         set_flag('s3.storage.avilable')
         status_set('active', 'Django S3 storage available')
     set_flag('s3.storage.checked')
-
-
-@when_not('conf.dirs.available')
-def create_conf_dir():
-    """Ensure config dir exists
-    """
-    status_set('maintenance', "Creating application directories")
-    for directory in [SU_CONF_DIR, LOG_DIR]:
-        if not os.path.isdir(directory):
-            os.makedirs(directory, mode=0o755, exist_ok=True)
-        chownr(directory, owner='www-data', group='www-data')
-    status_set('active', "Application directories created")
-    set_flag('conf.dirs.available')
 
 
 @when('snap.installed.django-gunicorn-nginx')
@@ -210,8 +194,7 @@ def render_memcache_config():
     set_flag('django.memcache.settings.available')
 
 
-@when('conf.dirs.available',
-      'django.custom.settings.available',
+@when('django.custom.settings.available',
       'django.email.settings.available',
       'django.celery.settings.available')
 @when_any('s3.storage.settings.available',
